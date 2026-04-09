@@ -58,6 +58,33 @@ rtfm -s "vulkan create swap chain"
 
 It also has read-only access to your codebase to detect which library versions you use.
 
+## NeoVim Integration
+
+Add this to your keymaps or `init.lua` to use `:Rtfm` as a command inside NeoVim. It opens a horizontal split with the result. Press `q` to close when done.
+
+```lua
+vim.api.nvim_create_user_command("Rtfm", function(opts)
+  vim.cmd("split")
+  vim.cmd("terminal rtfm " .. opts.args)
+  vim.cmd("startinsert")
+  vim.api.nvim_create_autocmd("TermClose", {
+    buffer = 0,
+    once = true,
+    callback = function()
+      vim.bo.bufhidden = "wipe"
+      vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = true })
+    end,
+  })
+end, { nargs = "+", desc = "rtfm — API doc lookup" })
+```
+
+Usage inside NeoVim:
+
+```
+:Rtfm SDL3 create window
+:Rtfm -sm OpenGL depth buffer bits
+```
+
 ## Philosophy
 
 - Official docs first, always
