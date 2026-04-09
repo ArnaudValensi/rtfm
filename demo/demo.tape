@@ -11,11 +11,13 @@ Type "PS1='$ '"
 Enter
 Type "alias rtfm=~/.rtfm/demo/mock-rtfm.sh"
 Enter
-Sleep 200ms
+Type "clear"
+Enter
+Sleep 500ms
 Show
 
 Type@75ms 'rtfm "SDL3 create window"'
 Sleep 500ms
 Enter
 
-Sleep 5s
+Sleep 8s
