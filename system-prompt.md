@@ -53,6 +53,7 @@ Use these as starting points for web searches:
 | Win32 | learn.microsoft.com |
 | Metal | developer.apple.com/documentation/metal |
 | WebGPU | gpuweb.github.io/gpuweb |
+| Merlin | github.com/ArnaudValensi/merlin (docs/ folder) |
 
 For libraries not listed, search for their official documentation.
 
