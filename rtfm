@@ -1,0 +1,75 @@
+#!/bin/sh
+set -e
+
+RTFM_DIR="$(dirname "$(realpath "$0")")"
+MODEL="opus"
+EFFORT="high"
+
+# Parse flags
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --help)
+      # fall through to usage
+      set --
+      break
+      ;;
+    -*)
+      # Parse combined short flags: -s, -l, -m, -h, -sl, -sm, -sh, etc.
+      flags="${1#-}"
+      shift
+      while [ -n "$flags" ]; do
+        flag="${flags%"${flags#?}"}"
+        flags="${flags#?}"
+        case "$flag" in
+          s) MODEL="sonnet" ;;
+          l) EFFORT="low" ;;
+          m) EFFORT="medium" ;;
+          h) EFFORT="high" ;;
+          *)
+            echo "Unknown flag: -$flag" >&2
+            exit 1
+            ;;
+        esac
+      done
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+QUERY="$*"
+
+# No query → show help
+if [ -z "$QUERY" ]; then
+  cat <<'EOF'
+rtfm — Read The Manual. API doc lookup powered by Claude Code.
+
+Usage:
+  rtfm "your question about an API"
+  rtfm -s "your question"              (use Sonnet instead of Opus)
+  rtfm -m "your question"              (medium effort)
+  rtfm -sl "your question"             (Sonnet + low effort)
+
+Flags:
+  -s        Use Sonnet (default: Opus)
+  -l        Low effort
+  -m        Medium effort
+  -h        High effort (default)
+  --help    Show this help
+
+Flags can be combined: -sl, -sm, -sh
+
+Examples:
+  rtfm "SDL change framebuffer resolution"
+  rtfm "OpenGL set depth buffer bits"
+  rtfm -sm "posix shared memory"
+EOF
+  exit 0
+fi
+
+exec claude --model "$MODEL" --effort "$EFFORT" \
+  --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
+  --allowedTools "WebSearch WebFetch Read Glob Grep" \
+  --tools "WebSearch,WebFetch,Read,Glob,Grep" \
+  -p "$QUERY"
