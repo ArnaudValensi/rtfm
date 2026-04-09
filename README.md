@@ -10,6 +10,15 @@ Like `tldr` or `cheat.sh`, but for any programming API — backed by real doc ve
 
 ![demo](demo/demo.gif)
 
+```
+$ rtfm "SDL3 configure OpenGL context attributes"
+
+SDL_GL_SetAttribute
+  Set an OpenGL context attribute. Call BEFORE creating the window.
+  bool SDL_GL_SetAttribute(SDL_GLAttr attr, int value);
+  -> https://wiki.libsdl.org/SDL3/SDL_GL_SetAttribute
+```
+
 ## Install
 
 ```sh
