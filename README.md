@@ -23,7 +23,20 @@ SDL_GL_SetAttribute
 git clone https://github.com/ArnaudValensi/rtfm.git ~/.rtfm && ln -sf ~/.rtfm/rtfm ~/.local/bin/rtfm
 ```
 
-Requires [Claude Code](https://claude.ai/claude-code) installed and authenticated.
+### Dependencies
+
+- [Claude Code](https://claude.ai/claude-code) — required
+- [glow](https://github.com/charmbracelet/glow) — Markdown rendering (skip with `-r`)
+- [fzf](https://github.com/junegunn/fzf) — history search (`-f`, `-F`)
+- [ripgrep](https://github.com/BurntSushi/ripgrep) — content search (`-F`)
+
+```sh
+# Arch
+pacman -S glow fzf ripgrep
+
+# macOS
+brew install glow fzf ripgrep
+```
 
 ## Usage
 
