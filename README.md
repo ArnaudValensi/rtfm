@@ -16,7 +16,7 @@ SDL_GL_SetAttribute
 ## Install
 
 ```sh
-git clone <repo-url> ~/.rtfm && ln -sf ~/.rtfm/rtfm ~/.local/bin/rtfm
+git clone https://github.com/ArnaudValensi/rtfm.git ~/.rtfm && ln -sf ~/.rtfm/rtfm ~/.local/bin/rtfm
 ```
 
 Requires [Claude Code](https://claude.ai/claude-code) installed and authenticated.
