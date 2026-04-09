@@ -68,6 +68,9 @@ EOF
   exit 0
 fi
 
+echo "rtfm › $QUERY"
+echo ""
+
 exec claude --model "$MODEL" --effort "$EFFORT" \
   --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
   --allowedTools "WebSearch WebFetch Read Glob Grep" \
