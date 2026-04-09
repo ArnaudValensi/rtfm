@@ -1,4 +1,8 @@
-# rtfm
+```
+┬─┐┌┬┐┌─┐┌┬┐
+├┬┘ │ ├┤ │││
+┴└─ ┴ └  ┴ ┴
+```
 
 API documentation lookup in your terminal. Powered by Claude Code.
 
@@ -35,6 +39,9 @@ rtfm "your question about an API"
 | `-l` | Low effort |
 | `-m` | Medium effort |
 | `-h` | High effort (default) |
+| `-r` | Raw output (no glow rendering) |
+| `-f` | Search history by query (fzf) |
+| `-F` | Search history by content (rg + fzf) |
 | `--help` | Show help |
 
 Flags combine: `-sl` = Sonnet + low, `-sm` = Sonnet + medium.
