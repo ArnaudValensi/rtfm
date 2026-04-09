@@ -2,18 +2,26 @@
 set -e
 
 RTFM_DIR="$(dirname "$(realpath "$0")")"
+HISTORY_DIR="$HOME/.rtfm/history"
 
-check_glow() {
-  if ! command -v glow >/dev/null 2>&1; then
-    echo "rtfm: glow is required but not installed (use -r for raw output)." >&2
-    echo "Install it: pacman -S glow (Arch), brew install glow (macOS), or https://github.com/charmbracelet/glow" >&2
-    exit 1
-  fi
+# Dependency checks (deferred to when actually needed)
+require_claude() {
+  command -v claude >/dev/null 2>&1 || { echo "rtfm: claude is required but not installed. See https://claude.ai/claude-code" >&2; exit 1; }
+}
+require_glow() {
+  command -v glow >/dev/null 2>&1 || { echo "rtfm: glow is required but not installed (use -r for raw output).\nInstall it: pacman -S glow (Arch), brew install glow (macOS), or https://github.com/charmbracelet/glow" >&2; exit 1; }
+}
+require_fzf() {
+  command -v fzf >/dev/null 2>&1 || { echo "rtfm: fzf is required for history search.\nInstall it: pacman -S fzf (Arch), brew install fzf (macOS), or https://github.com/junegunn/fzf" >&2; exit 1; }
+}
+require_rg() {
+  command -v rg >/dev/null 2>&1 || { echo "rtfm: ripgrep (rg) is required for content search.\nInstall it: pacman -S ripgrep (Arch), brew install ripgrep (macOS), or https://github.com/BurntSushi/ripgrep" >&2; exit 1; }
 }
 
 MODEL="opus"
 EFFORT="high"
 RAW=false
+MODE="lookup"
 
 # Parse flags
 while [ $# -gt 0 ]; do
@@ -24,7 +32,7 @@ while [ $# -gt 0 ]; do
       break
       ;;
     -*)
-      # Parse combined short flags: -s, -l, -m, -h, -sl, -sm, -sh, etc.
+      # Parse combined short flags
       flags="${1#-}"
       shift
       while [ -n "$flags" ]; do
@@ -36,6 +44,8 @@ while [ $# -gt 0 ]; do
           m) EFFORT="medium" ;;
           h) EFFORT="high" ;;
           r) RAW=true ;;
+          f) MODE="find" ;;
+          F) MODE="grep" ;;
           *)
             echo "Unknown flag: -$flag" >&2
             exit 1
@@ -51,16 +61,15 @@ done
 
 QUERY="$*"
 
-# No query → show help
-if [ -z "$QUERY" ]; then
+# No query and no special mode → show help
+if [ -z "$QUERY" ] && [ "$MODE" = "lookup" ]; then
   cat <<'EOF'
 rtfm — Read The Manual. API doc lookup powered by Claude Code.
 
 Usage:
   rtfm "your question about an API"
-  rtfm -s "your question"              (use Sonnet instead of Opus)
-  rtfm -m "your question"              (medium effort)
-  rtfm -sl "your question"             (Sonnet + low effort)
+  rtfm -f                                (search history by query)
+  rtfm -F                                (search history by content)
 
 Flags:
   -s        Use Sonnet (default: Opus)
@@ -68,6 +77,8 @@ Flags:
   -m        Medium effort
   -h        High effort (default)
   -r        Raw output (no glow rendering)
+  -f        Search history by query (fzf)
+  -F        Search history by content (rg + fzf)
   --help    Show this help
 
 Flags can be combined: -sl, -sm, -sh
@@ -76,24 +87,89 @@ Examples:
   rtfm "SDL change framebuffer resolution"
   rtfm "OpenGL set depth buffer bits"
   rtfm -sm "posix shared memory"
+  rtfm -f
+  rtfm -F
 EOF
   exit 0
 fi
 
+# --- History search modes ---
+
+if [ "$MODE" = "find" ]; then
+  require_fzf
+  require_glow
+  if [ ! -d "$HISTORY_DIR" ] || [ -z "$(ls "$HISTORY_DIR" 2>/dev/null)" ]; then
+    echo "rtfm: no history yet." >&2
+    exit 1
+  fi
+  # Extract query from first line of each file, use as fzf input
+  # Format: "filename<tab>query"
+  entries=""
+  for f in "$HISTORY_DIR"/*.md; do
+    query_line=$(head -1 "$f" | sed 's/^# //')
+    entries="$entries$(basename "$f")	$query_line
+"
+  done
+  selected=$(echo "$entries" | fzf \
+    --with-nth=2.. \
+    --delimiter='\t' \
+    --preview="glow '$HISTORY_DIR/{1}'" \
+    --preview-window=right:60%:wrap \
+    --prompt="rtfm › ")
+  [ -z "$selected" ] && exit 0
+  file=$(echo "$selected" | cut -f1)
+  glow "$HISTORY_DIR/$file"
+  exit 0
+fi
+
+if [ "$MODE" = "grep" ]; then
+  require_fzf
+  require_rg
+  require_glow
+  if [ ! -d "$HISTORY_DIR" ] || [ -z "$(ls "$HISTORY_DIR" 2>/dev/null)" ]; then
+    echo "rtfm: no history yet." >&2
+    exit 1
+  fi
+  selected=$(: | fzf \
+    --disabled \
+    --bind "change:reload:rg --files-with-matches --ignore-case {q} '$HISTORY_DIR' 2>/dev/null || true" \
+    --preview="glow {}" \
+    --preview-window=right:60%:wrap \
+    --prompt="rtfm content › ")
+  [ -z "$selected" ] && exit 0
+  glow "$selected"
+  exit 0
+fi
+
+# --- Lookup mode ---
+
+require_claude
+
 echo "rtfm › $QUERY"
 echo ""
 
+# Ensure history dir exists
+mkdir -p "$HISTORY_DIR"
+
+# Slugify query for filename
+slug=$(echo "$QUERY" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//' | cut -c1-60)
+date_prefix=$(date +%Y-%m-%d)
+history_file="$HISTORY_DIR/${date_prefix}-${slug}.md"
+
+# Run lookup
+result=$(claude --model "$MODEL" --effort "$EFFORT" \
+  --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
+  --allowedTools "WebSearch WebFetch Read Glob Grep" \
+  --tools "WebSearch,WebFetch,Read,Glob,Grep" \
+  -p "$QUERY")
+
+# Save to history (query as first line)
+printf "# %s\n\n%s\n" "$QUERY" "$result" > "$history_file"
+
+# Display
 if [ "$RAW" = true ]; then
-  exec claude --model "$MODEL" --effort "$EFFORT" \
-    --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
-    --allowedTools "WebSearch WebFetch Read Glob Grep" \
-    --tools "WebSearch,WebFetch,Read,Glob,Grep" \
-    -p "$QUERY"
+  echo "$result"
 else
-  check_glow
-  claude --model "$MODEL" --effort "$EFFORT" \
-    --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
-    --allowedTools "WebSearch WebFetch Read Glob Grep" \
-    --tools "WebSearch,WebFetch,Read,Glob,Grep" \
-    -p "$QUERY" | glow
+  require_glow
+  echo "$result" | glow
 fi
