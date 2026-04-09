@@ -70,7 +70,7 @@ FUNCTION_NAME_2 (if applicable)
   -> https://link.to/source
 ```
 
-After the function listing, include a short usage example (2-5 lines of code) when it clarifies how to actually call the function(s). Skip the example when the signature alone is self-explanatory.
+After the function listing, include a concise usage example when it clarifies how to actually call the function(s). Skip the example when the signature alone is self-explanatory.
 
 If extra context is needed (e.g., "call this BEFORE creating the window"), add one short note line.
 
