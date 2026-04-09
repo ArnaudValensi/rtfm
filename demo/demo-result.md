@@ -1,17 +1,22 @@
-# SDL3 create a window
-
 ```
 SDL_CreateWindow
-  Create a window with a given title, size, and flags.
+  Create a window with the specified title, dimensions, and flags.
   SDL_Window * SDL_CreateWindow(const char *title, int w, int h, SDL_WindowFlags flags);
-  Returns SDL_Window* or NULL on failure (check SDL_GetError()).
   -> https://wiki.libsdl.org/SDL3/SDL_CreateWindow
 ```
 
-Note: SDL3 changed the signature from SDL2 — `x`/`y` position params were removed. The window is shown by default; pass `SDL_WINDOW_HIDDEN` to suppress. If using an `SDL_Renderer`, prefer `SDL_CreateWindowAndRenderer()` to avoid flicker.
+**Parameters:**
+- `title` — window title (UTF-8)
+- `w`, `h` — width and height in pixels
+- `flags` — 0 or OR'd `SDL_WindowFlags` (e.g. `SDL_WINDOW_OPENGL`, `SDL_WINDOW_RESIZABLE`, `SDL_WINDOW_HIDDEN`)
 
-Common flags: `SDL_WINDOW_RESIZABLE`, `SDL_WINDOW_FULLSCREEN`, `SDL_WINDOW_HIDDEN`, `SDL_WINDOW_OPENGL`, `SDL_WINDOW_VULKAN`, `SDL_WINDOW_METAL`, `SDL_WINDOW_HIGH_PIXEL_DENSITY`.
+**Returns:** `SDL_Window *` on success, `NULL` on failure (check `SDL_GetError()`).
 
-Sources:
-- [SDL3/SDL_CreateWindow - SDL Wiki](https://wiki.libsdl.org/SDL3/SDL_CreateWindow)
-- [SDL3/SDL_WindowFlags - SDL Wiki](https://wiki.libsdl.org/SDL3/SDL_WindowFlags)
+```c
+SDL_Window *window = SDL_CreateWindow("My App", 800, 600, SDL_WINDOW_RESIZABLE);
+if (!window) {
+    SDL_Log("Failed: %s", SDL_GetError());
+}
+```
+
+Note: SDL3 removed the `x, y` position parameters that SDL2 had. Use `SDL_SetWindowPosition()` after creation if needed. Window is shown by default unless `SDL_WINDOW_HIDDEN` is set.
