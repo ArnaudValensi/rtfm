@@ -4,9 +4,7 @@
 ┴└─ ┴ └  ┴ ┴
 ```
 
-API documentation lookup in your terminal. Powered by Claude Code.
-
-Like `tldr` or `cheat.sh`, but for any programming API — backed by real doc verification, not static cheat sheets.
+API documentation lookup in your terminal. Searches official docs first, falls back to trusted sources, and always tells you where the answer came from. Powered by Claude Code.
 
 ![demo](demo/demo.gif)
 
