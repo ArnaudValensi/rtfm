@@ -3,6 +3,7 @@ set -e
 
 RTFM_DIR="$(dirname "$(realpath "$0")")"
 HISTORY_DIR="$HOME/.rtfm/history"
+SESSION_FILE="$HOME/.rtfm/.last-session"
 
 # Dependency checks (deferred to when actually needed)
 require_claude() {
@@ -46,6 +47,7 @@ while [ $# -gt 0 ]; do
           r) RAW=true ;;
           f) MODE="find" ;;
           F) MODE="grep" ;;
+          i) MODE="interactive" ;;
           *)
             echo "Unknown flag: -$flag" >&2
             exit 1
@@ -68,6 +70,8 @@ rtfm — Read The Manual. API doc lookup powered by Claude Code.
 
 Usage:
   rtfm "your question about an API"
+  rtfm -i                                (resume last session interactively)
+  rtfm -i "your question"               (start interactive session)
   rtfm -f                                (search history by query)
   rtfm -F                                (search history by content)
 
@@ -77,6 +81,7 @@ Flags:
   -m        Medium effort
   -h        High effort (default)
   -r        Raw output (no glow rendering)
+  -i        Interactive mode (resume last or start new)
   -f        Search history by query (fzf)
   -F        Search history by content (rg + fzf)
   --help    Show this help
@@ -87,6 +92,8 @@ Examples:
   rtfm "SDL change framebuffer resolution"
   rtfm "OpenGL set depth buffer bits"
   rtfm -sm "posix shared memory"
+  rtfm -i
+  rtfm -i "SDL3 window management"
   rtfm -f
   rtfm -F
 EOF
@@ -141,6 +148,29 @@ if [ "$MODE" = "grep" ]; then
   exit 0
 fi
 
+# --- Interactive mode ---
+
+if [ "$MODE" = "interactive" ]; then
+  require_claude
+  if [ -n "$QUERY" ]; then
+    # New interactive session with query
+    exec claude --model "$MODEL" --effort "$EFFORT" \
+      --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
+      --allowedTools "WebSearch WebFetch Read Glob Grep" \
+      --tools "WebSearch,WebFetch,Read,Glob,Grep" \
+      "$QUERY"
+  else
+    # Resume last session
+    if [ ! -f "$SESSION_FILE" ]; then
+      echo "rtfm: no previous session to resume. Use: rtfm -i \"your question\"" >&2
+      exit 1
+    fi
+    session_id=$(cat "$SESSION_FILE")
+    echo "rtfm › resuming session $session_id"
+    exec claude --resume "$session_id"
+  fi
+fi
+
 # --- Lookup mode ---
 
 require_claude
@@ -156,20 +186,33 @@ slug=$(echo "$QUERY" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed
 date_prefix=$(date +%Y-%m-%d)
 history_file="$HISTORY_DIR/${date_prefix}-${slug}.md"
 
-# Run lookup
-result=$(claude --model "$MODEL" --effort "$EFFORT" \
+# Run lookup (JSON output to capture session ID)
+tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT
+
+claude --model "$MODEL" --effort "$EFFORT" \
   --append-system-prompt-file "$RTFM_DIR/system-prompt.md" \
   --allowedTools "WebSearch WebFetch Read Glob Grep" \
   --tools "WebSearch,WebFetch,Read,Glob,Grep" \
-  -p "$QUERY")
+  --output-format json \
+  -p "$QUERY" > "$tmpfile"
+
+# Extract result and session ID
+result=$(python3 -c "import sys,json; print(json.load(open(sys.argv[1]))['result'])" "$tmpfile" 2>/dev/null || cat "$tmpfile")
+session_id=$(python3 -c "import sys,json; print(json.load(open(sys.argv[1]))['session_id'])" "$tmpfile" 2>/dev/null || true)
+
+# Save session ID
+if [ -n "$session_id" ]; then
+  echo "$session_id" > "$SESSION_FILE"
+fi
 
 # Save to history (query as first line)
 printf "# %s\n\n%s\n" "$QUERY" "$result" > "$history_file"
 
 # Display
 if [ "$RAW" = true ]; then
-  echo "$result"
+  printf "%s\n" "$result"
 else
   require_glow
-  echo "$result" | glow
+  printf "%s\n" "$result" | glow
 fi

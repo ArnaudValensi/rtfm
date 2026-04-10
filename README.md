@@ -53,6 +53,7 @@ rtfm "your question about an API"
 | `-m` | Medium effort |
 | `-h` | High effort (default) |
 | `-r` | Raw output (no glow rendering) |
+| `-i` | Interactive mode (resume last or start new) |
 | `-f` | Search history by query (fzf) |
 | `-F` | Search history by content (rg + fzf) |
 | `--help` | Show help |
