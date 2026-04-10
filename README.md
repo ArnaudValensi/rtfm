@@ -20,7 +20,7 @@ SDL_GL_SetAttribute
 ## Install
 
 ```sh
-git clone https://github.com/ArnaudValensi/rtfm.git ~/.rtfm && ln -sf ~/.rtfm/rtfm ~/.local/bin/rtfm
+git clone https://github.com/ArnaudValensi/rtfm.git ~/.rtfm && sudo ln -sf ~/.rtfm/rtfm /usr/local/bin/rtfm
 ```
 
 ### Dependencies
